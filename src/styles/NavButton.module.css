@@ -1,0 +1,14 @@
+.button {
+  padding: 5px 9px;
+  border: 1px solid #0006;
+  background-color: #fff;
+  border-radius: 6px;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+.buttonwrap {
+  display: inline-block;
+  position: relative;
+}
