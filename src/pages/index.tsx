@@ -6,9 +6,17 @@ import { Grid, Text } from "@nextui-org/react";
 
 import { api } from "~/utils/api";
 import GrabbableObject from "~/components/GrabbableObject";
+import { useUser } from "@clerk/nextjs";
 
 const Home: NextPage = () => {
-  const hello = api.example.hello.useQuery({ text: "from tRPC" });
+  const user = useUser()
+  let notes = api.notes.getDefaultNotes.useQuery();
+
+  if (user.user) {
+    notes = api.notes.getNotes.useQuery({ userId: user.user.id });
+  }
+
+  console.log(notes.data)
 
   return (
     <>
@@ -19,8 +27,12 @@ const Home: NextPage = () => {
       </Head>
 
       <Header />
-      <main className="flex min-h-screen flex-col items-center justify-center bg">
-        <GrabbableObject title={'hewwo'} body={'me making note taking app'} />
+      <main className="flex h-full min-h-screen flex-col bg overflow-auto">
+        {notes.data?.map(note => {
+          return (
+            <GrabbableObject title={note.title} body={note.content} key={note.id} />
+          )
+        })}
       </main>
     </>
   );

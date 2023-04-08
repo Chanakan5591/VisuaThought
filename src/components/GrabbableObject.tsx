@@ -1,7 +1,7 @@
-import { Card, Grid, Text } from '@nextui-org/react'
+import { Card, Grid, Row, Text } from '@nextui-org/react'
 import { useSpring, animated } from '@react-spring/web'
 import { useDrag } from '@use-gesture/react'
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useLayoutEffect } from 'react'
 import React from 'react'
 import useSound from 'use-sound'
 
@@ -17,25 +17,36 @@ const GrabbableObject = (props: Props) => {
   const [isDown, setDown] = useState(false)
   const [placeFX] = useSound('sounds/card-place.mp3')
 
-  const bind = useDrag(({ down, movement: [mx, my] }) => {
+  const bind = useDrag(({ event, down, movement: [mx, my] }) => {
+    const ignoreButton = (event.target as Element).closest('.connector')
+
+    if(!ignoreButton) {
+
     setDown(down)
-    if (down) {
-      api.start({ x: mx + startX, y: my + startY, immediate: down })
-    } else {
-      placeFX()
-      setStartX(x.get())
-      setStartY(y.get())
+      if (down) {
+        const newX = Math.max(0, mx + startX)
+        const newY = Math.max(0, my + startY)
+        api.start({ x: newX, y: newY, immediate: down })
+      } else {
+        placeFX()
+        setStartX(x.get())
+        setStartY(y.get())
+      }
     }
   })
 
   return (
-    <animated.div className='relative' {...bind()} style={{ x, y, touchAction: 'none', cursor: 'pointer' }}>
-      <Card variant={isDown ? 'shadow' : 'bordered'}>
+    <animated.div className='relative' {...bind()} style={{ x, y, touchAction: 'none', cursor: 'pointer', userSelect: 'none', overflow: 'visible', maxWidth: '400px' }}>
+      <Card variant={isDown ? 'shadow' : 'bordered'} style={{ display: 'inline-block', width: 'auto' }}>
         <Card.Header>
-          <Text b>{props.title}</Text>
+          <Row justify='space-between'>
+            <Text b>{props.title}</Text>
+
+            <button className='connector bg-transparent border-2 border-solid rounded-full w-4 h-4 cursor-cell'></button>
+          </Row>
         </Card.Header>
         <Card.Divider />
-        <Card.Body css={{ py: "$10" }}>
+        <Card.Body css={{ py: "$10", height: '100%' }}>
           <Text>
             {props.body}
           </Text>
