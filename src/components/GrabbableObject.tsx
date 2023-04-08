@@ -1,39 +1,72 @@
+import { useUser } from '@clerk/nextjs'
 import { Card, Grid, Row, Text } from '@nextui-org/react'
 import { useSpring, animated } from '@react-spring/web'
 import { useDrag } from '@use-gesture/react'
 import { useRef, useState, useEffect, useLayoutEffect } from 'react'
 import React from 'react'
 import useSound from 'use-sound'
+import { getNotesLocal, saveNotesLocal } from '~/localstorage/noteStore'
+import { api } from '~/utils/api'
 
 interface Props {
   title: string,
-  body: string
+  body: string,
+  startXPos: number,
+  startYPos: number,
+  id: string
 }
 
 const GrabbableObject = (props: Props) => {
-  const [{ x, y }, api] = useSpring(() => ({ x: 0, y: 0 }))
-  const [startX, setStartX] = useState(0)
-  const [startY, setStartY] = useState(0)
+  const user = useUser()
+  const [{ x, y }, sApi] = useSpring(() => ({ x: props.startXPos, y: props.startYPos }))
+  const [startX, setStartX] = useState(props.startXPos)
+  const [startY, setStartY] = useState(props.startYPos)
   const [isDown, setDown] = useState(false)
   const [placeFX] = useSound('sounds/card-place.mp3')
+  const { mutate } = api.notes.storeNote.useMutation({
+    onSuccess: () => {
+      null // placeholder for now
+    }
+  })
 
   const bind = useDrag(({ event, down, movement: [mx, my] }) => {
     const ignoreButton = (event.target as Element).closest('.connector')
 
-    if(!ignoreButton) {
 
-    setDown(down)
+    if (!ignoreButton) {
+
+      setDown(down)
       if (down) {
         const newX = Math.max(0, mx + startX)
         const newY = Math.max(0, my + startY)
-        api.start({ x: newX, y: newY, immediate: down })
+        sApi.start({ x: newX, y: newY, immediate: down })
       } else {
         placeFX()
         setStartX(x.get())
         setStartY(y.get())
+        const notes = getNotesLocal()
+        const currInLocalNoteIdx = notes.findIndex(note => note.id === props.id)
+        let currInLocalNote = notes.find(note => note.id === props.id)
+
+        currInLocalNote.positionX = x.get()
+        currInLocalNote.positionY = y.get()
+        notes[currInLocalNoteIdx] = currInLocalNote
+
+        saveNotesLocal(notes)
+        if (user.user) {
+          mutate({
+            id: props.id,
+            notes: {
+              positionX: x.get(),
+              positionY: y.get()
+            }
+          })
+        }
       }
     }
   })
+
+
 
   return (
     <animated.div className='relative' {...bind()} style={{ x, y, touchAction: 'none', cursor: 'pointer', userSelect: 'none', overflow: 'visible', maxWidth: '400px' }}>

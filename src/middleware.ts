@@ -1,11 +1,10 @@
 import { withClerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
- 
-export default withClerkMiddleware((req: NextRequest) => {
+
+export default withClerkMiddleware(() => {
   return NextResponse.next();
 });
- 
+
 export const config = {
   matcher: [
     /*
@@ -15,7 +14,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    "/((?!static|.*\\..*|_next|favicon.ico).*)",
-    "/",
+    "/(.*?trpc.*?|(?!static|.*\\..*|_next|favicon.ico).*)"
   ],
 }

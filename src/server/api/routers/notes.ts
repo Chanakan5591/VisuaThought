@@ -1,6 +1,14 @@
 import { z } from "zod";
 
-import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, privateProcedure, publicProcedure } from "~/server/api/trpc";
+
+const Note = z.object({
+  title: z.string().optional(),
+  content: z.string().optional(),
+  positionX: z.number().optional(),
+  positionY: z.number().optional(),
+  authorId: z.string().optional()
+})
 
 export const notesRouter = createTRPCRouter({
   getNotes: publicProcedure
@@ -26,5 +34,22 @@ export const notesRouter = createTRPCRouter({
       })
 
       return defNotes
+    }),
+
+  storeNote: privateProcedure
+    .input(z.object({ id: z.string(), notes: Note }))
+    .mutation(async ({ ctx, input }) => {
+      const note = await ctx.prisma.notes.update({
+        where: {
+          id: input.id
+        },
+        data: {
+          title: input.notes.title,
+          content: input.notes.content,
+          positionX: input.notes.positionX,
+          positionY: input.notes.positionY
+        }
+      })
+      return note
     })
 });

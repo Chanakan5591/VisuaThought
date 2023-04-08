@@ -18,6 +18,8 @@ model Notes {
     title String @db.VarChar(255)
     content String @db.VarChar(255)
     authorId String
+    positionX Float @default(16)
+    positionY Float @default(24)
     
     @@index([authorId])
 }

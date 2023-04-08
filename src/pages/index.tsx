@@ -6,17 +6,41 @@ import { Grid, Text } from "@nextui-org/react";
 
 import { api } from "~/utils/api";
 import GrabbableObject from "~/components/GrabbableObject";
-import { useUser } from "@clerk/nextjs";
+import { SignIn, useUser } from "@clerk/nextjs";
+import { useState, useEffect } from "react";
+import { saveNotesLocal, getNotesLocal } from "~/localstorage/noteStore";
 
 const Home: NextPage = () => {
   const user = useUser()
-  let notes = api.notes.getDefaultNotes.useQuery();
+  const [notes, setNotes] = useState([])
 
+  let remoteNotes
   if (user.user) {
-    notes = api.notes.getNotes.useQuery({ userId: user.user.id });
+    remoteNotes = api.notes.getNotes.useQuery({ userId: user.user.id });
+  } else {
+    remoteNotes = api.notes.getDefaultNotes.useQuery();
   }
 
-  console.log(notes.data)
+  useEffect(() => {
+    let localNotes = getNotesLocal()
+    let mergedNotes = [...localNotes]
+
+    const existingIds = new Set(localNotes.map(note => note.id))
+
+    if (remoteNotes.data) {
+      remoteNotes.data?.forEach(remoteNote => {
+        if (!existingIds.has(remoteNote.id)) {
+          mergedNotes.push(remoteNote);
+          existingIds.add(remoteNote.id)
+        }
+      })
+    }
+
+    setNotes(mergedNotes)
+    saveNotesLocal(mergedNotes)
+  }, [remoteNotes.data])
+
+  console.log(notes)
 
   return (
     <>
@@ -28,11 +52,12 @@ const Home: NextPage = () => {
 
       <Header />
       <main className="flex h-full min-h-screen flex-col bg overflow-auto">
-        {notes.data?.map(note => {
+        {notes.map(note => {
           return (
-            <GrabbableObject title={note.title} body={note.content} key={note.id} />
+            <GrabbableObject title={note.title} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} />
           )
         })}
+
       </main>
     </>
   );
