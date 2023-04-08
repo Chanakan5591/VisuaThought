@@ -28,8 +28,6 @@ const GrabbableObject = (props: Props) => {
 
   return (
     <animated.div className='relative' {...bind()} style={{ x, y }}>
-      <Grid.Container gap={2}>
-        <Grid>
           <Card variant={isDown ? 'shadow' : 'bordered'} >
             <Card.Header>
               <Text b>{props.title}</Text>
@@ -41,8 +39,6 @@ const GrabbableObject = (props: Props) => {
               </Text>
             </Card.Body>
           </Card>
-        </Grid>
-      </Grid.Container>
     </animated.div>
   )
 }
