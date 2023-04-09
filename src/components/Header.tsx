@@ -44,7 +44,11 @@ const Header = () => {
           {!user.user ?
             <NavButton href='/sign-in'>Sign In</NavButton>
             :
-            <UserButton />
+            <UserButton appearance={{
+              elements: {
+                userButtonAvatarBox: 'h-10 w-10'
+              }
+            }} />
           }
         </div>
       </nav>
