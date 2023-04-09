@@ -14,8 +14,9 @@ datasource db {
 model Notes {
     id        String   @id @default(cuid())
     createdAt DateTime @default(now())
+    updatedAt DateTime? @updatedAt
 
-    title String @db.VarChar(255)
+    title String? @db.VarChar(255)
     content String @db.VarChar(255)
     authorId String
     positionX Float @default(16)

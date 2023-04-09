@@ -90,13 +90,13 @@ const GrabbableObject = (props: Props) => {
 
 
   return (
-    <animated.div className='relative' {...bind()} style={{ x, y, touchAction: 'none', cursor: 'pointer', userSelect: 'none', overflow: 'visible', maxWidth: '400px' }}>
-      <Card variant={isDown ? 'shadow' : 'bordered'} style={{ display: 'inline-block', width: 'auto' }}>
+    <animated.div className='max-w-[400px] absolute' {...bind()} style={{ x, y, touchAction: 'none', cursor: 'pointer', userSelect: 'none', overflow: 'visible' }}>
+      <Card variant={isDown ? 'shadow' : 'bordered'} style={{ width: 'auto' }}>
         <Card.Header>
-          <Row justify='space-between'>
+          <Row justify='space-between' className='items-center'>
             <Text b>{props.title}</Text>
 
-            <button className='connector bg-transparent border-2 border-solid rounded-full w-4 h-4 cursor-cell'></button>
+            <button className='ml-4 connector bg-transparent border-2 border-solid rounded-full w-4 h-4 cursor-cell'></button>
           </Row>
         </Card.Header>
         <Card.Divider />
