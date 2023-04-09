@@ -14,12 +14,12 @@ import NavButton from "~/components/NavButton";
 //import Paint from "~/components/Painting";
 import type { UseTRPCQueryResult } from "@trpc/react-query/shared";
 import { createId } from "@paralleldrive/cuid2";
-import { on } from "events";
 
 
 const Home: NextPage = () => {
   const user = useUser()
   const [notes, setNotes] = useState<Notes[]>([])
+  const [localStateNotes, setLocalNotes] = useState<Notes[]>([])
   const [newCard, setNewCard] = useState(false)
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
   const [lastOpened, setLastOpened] = useState(false)
@@ -72,12 +72,28 @@ const Home: NextPage = () => {
     if (event.target !== event.currentTarget) return;
     if (event.key === 'Enter') {
       const newId = createId()
-      mutate({
+      const note = {
         id: newId,
-        notes: {
-          id: newId
-        }
-      })
+        title: undefined,
+        content: createValue,
+        positionX: modalPosition.x,
+        positionY: modalPosition.y,
+        createdAt: new Date(),
+        updatedAt: undefined,
+        authorId: user.user ? user.user.id : '0'
+      }
+
+      const notes: Notes[] = getNotesLocal()
+      notes.push(note)
+      saveNotesLocal(notes)
+      setLocalNotes(notes)
+
+      if (user.user) {
+        mutate({
+          id: newId,
+          notes: note
+        })
+      }
     }
   }
   type RemoteNotes = UseTRPCQueryResult<Notes[], unknown>;
@@ -106,10 +122,13 @@ const Home: NextPage = () => {
     config: { tension: 200, friction: 20 },
   })
 
+  useEffect(() => {
+    setLocalNotes(getNotesLocal())
+  }, [])
 
   useEffect(() => {
     if (!remoteNotes.data) return
-    const localNotes: Notes[] = getNotesLocal()
+    const localNotes: Notes[] = localStateNotes
 
     const existingNotes = new Map(localNotes.map((note: Notes) => [note.id, note]))
     let mergedNotes
@@ -121,7 +140,6 @@ const Home: NextPage = () => {
           existingNotes.set(remoteNote.id, remoteNote)
         }
       })
-
 
       localNotes.forEach((localNote: Notes) => {
         const existingNote = existingNotes.get(localNote.id)
@@ -142,7 +160,7 @@ const Home: NextPage = () => {
 
     }
 
-  }, [remoteNotes?.data, user.user])
+  }, [remoteNotes?.data, user.user, localStateNotes])
 
 
   return (
@@ -167,7 +185,7 @@ const Home: NextPage = () => {
           <animated.div style={noteSpring} className={`card-modal absolute`} >
             <Card variant='shadow' style={{ display: 'inline-block', width: 'auto', border: '1px solid #0006' }}>
               <Card.Body>
-                <Input onKeyDown={handleKeyDown} onChange={(e) => setCreateValue(e.target.value)} placeholder='Jot down your mind!' />
+                <Input label='yo' onKeyDown={handleKeyDown} onChange={(e) => setCreateValue(e.target.value)} placeholder='Jot down your mind!' />
               </Card.Body>
               <Card.Divider />
               <Card.Body css={{ py: "$6", height: '100%' }}>

@@ -7,8 +7,7 @@ const Note = z.object({
   title: z.string().optional(),
   content: z.string(),
   positionX: z.number(),
-  positionY: z.number(),
-  authorId: z.string()
+  positionY: z.number()
 })
 
 export const notesRouter = createTRPCRouter({
@@ -57,7 +56,7 @@ export const notesRouter = createTRPCRouter({
           content: input.notes.content,
           positionX: input.notes.positionX,
           positionY: input.notes.positionY,
-          authorId: input.notes.authorId
+          authorId: ctx.userId
         }
       })
       return note
