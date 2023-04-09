@@ -2,17 +2,38 @@ import { type NextPage } from "next";
 import Head from "next/head";
 import Link from "next/link";
 import Header from "~/components/Header";
-import { Grid, Text } from "@nextui-org/react";
+import { Card, Grid, Text } from "@nextui-org/react";
 
 import { api } from "~/utils/api";
 import GrabbableObject from "~/components/GrabbableObject";
 import { SignIn, useUser } from "@clerk/nextjs";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { saveNotesLocal, getNotesLocal } from "~/localstorage/noteStore";
+import { Notes } from "@prisma/client";
+import { useSpring, animated } from "@react-spring/web";
+import NavButton from "~/components/NavButton";
+import { handleClientScriptLoad } from "next/script";
 
 const Home: NextPage = () => {
   const user = useUser()
-  const [notes, setNotes] = useState([])
+  const [notes, setNotes] = useState<Notes[]>([])
+  const [newCard, setNewCard] = useState(false)
+  const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
+
+  const handleMainContentClick = (event) => {
+    if (event.target !== event.currentTarget) {
+      return
+    }
+    // Get the position of the click event relative to the viewport
+    const clickX = event.clientX;
+    const clickY = event.clientY;
+
+    // Set the position of the modal to the position of the click event
+    setModalPosition({ x: clickX, y: clickY });
+
+    // Show the modal
+    setNewCard(!newCard);
+  };
 
   let remoteNotes
   if (user.user) {
@@ -21,9 +42,17 @@ const Home: NextPage = () => {
     remoteNotes = api.notes.getDefaultNotes.useQuery();
   }
 
+  const noteSpring = useSpring({
+    from: { opacity: 0, scale: 0.9 },
+    to: { opacity: newCard ? 1 : 0, scale: newCard ? 1 : 0.9, left: modalPosition.x, top: modalPosition.y },
+    config: { tension: 200, friction: 20 },
+  })
+
+
   useEffect(() => {
-    let localNotes = getNotesLocal()
-    let mergedNotes = [...localNotes]
+    if (!remoteNotes.data) return
+    const localNotes: Notes[] = (getNotesLocal() as Notes[])
+    const mergedNotes = [...localNotes]
 
     const existingIds = new Set(localNotes.map(note => note.id))
 
@@ -38,9 +67,7 @@ const Home: NextPage = () => {
 
     setNotes(mergedNotes)
     saveNotesLocal(mergedNotes)
-  }, [remoteNotes.data])
-
-  console.log(notes)
+  }, [remoteNotes?.data])
 
   return (
     <>
@@ -51,12 +78,28 @@ const Home: NextPage = () => {
       </Head>
 
       <Header />
-      <main className="flex h-full min-h-screen flex-col bg overflow-auto">
+      <main className="flex h-full min-h-screen flex-col bg overflow-auto" onClick={handleMainContentClick}>
         {notes.map(note => {
           return (
             <GrabbableObject title={note.title} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} />
           )
         })}
+
+        {newCard &&
+          <animated.div style={noteSpring} className={`card-modal absolute`} >
+            <Card variant='shadow' style={{ display: 'inline-block', width: 'auto', border: '1px solid #0006' }}>
+              <Card.Header>
+                <Text>yo</Text>
+              </Card.Header>
+              <Card.Divider />
+              <Card.Body css={{ py: "$10", height: '100%' }}>
+                <NavButton disabled className='mb-2'>New Spaces</NavButton>
+              </Card.Body>
+            </Card>
+
+          </animated.div>
+        }
+
 
       </main>
     </>
