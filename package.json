@@ -60,6 +60,6 @@
     }
   },
   "lint-staged": {
-    "*.ts": "next lint"
+    "*.ts,*.tsx": "next lint"
   }
 }
