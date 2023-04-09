@@ -5,7 +5,7 @@ import { Card } from "@nextui-org/react";
 import { useSpring, animated } from "@react-spring/web";
 
 
-const Header = (props: Props) => {
+const Header = () => {
   const user = useUser()
   const [newDialog, setNewDialog] = useState(false)
 
