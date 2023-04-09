@@ -10,7 +10,7 @@ const MyApp: AppType = ({ Component, pageProps }) => {
   return (
     <NextUIProvider>
       <ClerkProvider {...pageProps}>
-        <Component {...pageProps} />,
+        <Component {...pageProps} />
       </ClerkProvider>
     </NextUIProvider>
   )
