@@ -1,20 +1,22 @@
 import { useUser } from '@clerk/nextjs'
-import { Card, Grid, Row, Text } from '@nextui-org/react'
+import { Card, Row, Text } from '@nextui-org/react'
 import { useSpring, animated } from '@react-spring/web'
 import { useDrag } from '@use-gesture/react'
-import { useRef, useState, useEffect, useLayoutEffect } from 'react'
+import { useState } from 'react'
 import React from 'react'
 import useSound from 'use-sound'
 import { getNotesLocal, saveNotesLocal } from '~/localstorage/noteStore'
 import { api } from '~/utils/api'
 import { createId } from '@paralleldrive/cuid2'
+import type { Notes } from '@prisma/client'
 
 interface Props {
   title: string,
   body: string,
   startXPos: number,
   startYPos: number,
-  id: string
+  id: string,
+  createdAt: Date
 }
 
 const GrabbableObject = (props: Props) => {
@@ -45,26 +47,26 @@ const GrabbableObject = (props: Props) => {
         placeFX()
         setStartX(x.get())
         setStartY(y.get())
-        const notes = getNotesLocal()
+        const notes: Notes[] = getNotesLocal()
         const currInLocalNoteIdx = notes.findIndex(note => note.id === props.id)
-        let currInLocalNote = notes.find(note => note.id === props.id)
+        const currInLocalNote = notes.find(note => note.id === props.id) as Notes
 
         currInLocalNote.positionX = x.get()
         currInLocalNote.positionY = y.get()
         notes[currInLocalNoteIdx] = currInLocalNote
 
         if (user.user) {
-          let n = {
+          const n = {
             id: props.id,
             title: props.title,
             content: props.body,
             positionX: x.get(),
             positionY: y.get(),
-            authorId: user.user.id
-
+            authorId: user.user.id,
+            createdAt: props.createdAt
           }
 
-          if (currInLocalNote.authorId == 0) {
+          if (currInLocalNote.authorId === '0') {
             n.id = createId()
             mutate({
               id: n.id,

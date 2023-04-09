@@ -1,19 +1,18 @@
 import { type NextPage } from "next";
 import Head from "next/head";
-import Link from "next/link";
 import Header from "~/components/Header";
-import { Card, Text, Input, Checkbox, Row, Button } from "@nextui-org/react";
+import { Card, Input, Row } from "@nextui-org/react";
 
 import { api } from "~/utils/api";
 import GrabbableObject from "~/components/GrabbableObject";
-import { SignIn, useUser } from "@clerk/nextjs";
-import { useState, useEffect, useMemo } from "react";
+import { useUser } from "@clerk/nextjs";
+import React, { useState, useEffect } from "react";
 import { saveNotesLocal, getNotesLocal } from "~/localstorage/noteStore";
-import { Notes } from "@prisma/client";
+import type { Notes } from "@prisma/client";
 import { useSpring, animated } from "@react-spring/web";
 import NavButton from "~/components/NavButton";
-import { handleClientScriptLoad } from "next/script";
-import Paint from "~/components/Painting";
+//import Paint from "~/components/Painting";
+import type { UseTRPCQueryResult } from "@trpc/react-query/shared";
 
 
 const Home: NextPage = () => {
@@ -26,7 +25,7 @@ const Home: NextPage = () => {
   const [shouldRun, setShouldRun] = useState(true)
 
 
-  const handleMouseDown = (event) => {
+  const handleMouseDown = (event: React.MouseEvent<HTMLElement>) => {
     if (event.target !== event.currentTarget) {
       return;
     }
@@ -35,7 +34,7 @@ const Home: NextPage = () => {
     setModalPosition({ x: event.clientX, y: event.clientY });
   };
 
-  const handleMouseUp = (event) => {
+  const handleMouseUp = (event: React.MouseEvent<HTMLElement>) => {
     if (event.target !== event.currentTarget) {
       return;
     }
@@ -52,8 +51,9 @@ const Home: NextPage = () => {
       setNewCard(false)
     }
   };
+  type RemoteNotes = UseTRPCQueryResult<Notes[], unknown>;
 
-  let remoteNotes
+  let remoteNotes: RemoteNotes
   if (user.user) {
     remoteNotes = api.notes.getNotes.useQuery({ userId: user.user.id });
   } else {
@@ -76,13 +76,13 @@ const Home: NextPage = () => {
 
   useEffect(() => {
     if (!remoteNotes.data) return
-    const localNotes: Notes[] = (getNotesLocal() as Notes[])
+    const localNotes: Notes[] = getNotesLocal()
     let mergedNotes = [...localNotes]
 
     const existingIds = new Set(localNotes.map(note => note.id))
 
     if (remoteNotes.data) {
-      remoteNotes.data?.forEach(remoteNote => {
+      remoteNotes.data?.forEach((remoteNote: Notes) => {
         if (!existingIds.has(remoteNote.id)) {
           mergedNotes.push(remoteNote);
           existingIds.add(remoteNote.id)
@@ -90,13 +90,13 @@ const Home: NextPage = () => {
       })
 
       if (user.user) {
-        mergedNotes = mergedNotes.filter(note => note.authorId != 0)
+        mergedNotes = mergedNotes.filter(note => note.authorId !== '0')
       }
     }
 
     setNotes(mergedNotes)
     saveNotesLocal(mergedNotes)
-  }, [remoteNotes?.data])
+  }, [remoteNotes?.data, user.user])
 
   return (
     <>
@@ -111,7 +111,7 @@ const Home: NextPage = () => {
         {shouldRenderNotes &&
           notes.map(note => {
             return (
-              <GrabbableObject title={note.title} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} />
+              <GrabbableObject title={note.title} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} createdAt={note.createdAt} />
             )
           })}
 

@@ -1,9 +1,7 @@
-import { SignIn, UserButton, useUser } from "@clerk/nextjs";
-import type { NextComponentType } from "next";
-import Link from "next/link";
+import { UserButton, useUser } from "@clerk/nextjs";
 import NavButton from "./NavButton";
-import { useEffect, useState } from "react";
-import { Card, Row, Text } from "@nextui-org/react";
+import { useState } from "react";
+import { Card } from "@nextui-org/react";
 import { useSpring, animated } from "@react-spring/web";
 
 
