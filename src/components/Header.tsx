@@ -1,11 +1,15 @@
 import { UserButton, useUser } from "@clerk/nextjs";
 import NavButton from "./NavButton";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@nextui-org/react";
 import { useSpring, animated } from "@react-spring/web";
 
+interface Props {
+  mouseClickedMain: boolean,
+  createClicked: (value: boolean) => void
+}
 
-const Header = () => {
+const Header = (props: Props) => {
   const user = useUser()
   const [newDialog, setNewDialog] = useState(false)
 
@@ -13,6 +17,15 @@ const Header = () => {
     setNewDialog(!newDialog)
   }
 
+  useEffect(() => {
+    if (newDialog) {
+      props.createClicked(true)
+    } else props.createClicked(false)
+  }, [newDialog, props])
+
+  useEffect(() => {
+    if (props.mouseClickedMain) setNewDialog(false)
+  }, [props.mouseClickedMain])
 
   const modalSpring = useSpring({
     from: { opacity: 0, scale: 0.9 },

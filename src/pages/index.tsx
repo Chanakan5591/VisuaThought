@@ -23,12 +23,18 @@ const Home: NextPage = () => {
   const [lastOpened, setLastOpened] = useState(false)
   const [shouldRenderNotes, setRenderNotes] = useState(false)
   const [shouldRun, setShouldRun] = useState(true)
+  const [mouseClick, setMouseClick] = useState(false)
+  const [headerCreateClicked, setCreateClicked] = useState(false)
 
+  const setHeaderClicked = (value: boolean) => {
+    setCreateClicked(value)
+  }
 
   const handleMouseDown = (event: React.MouseEvent<HTMLElement>) => {
     if (event.target !== event.currentTarget) {
       return;
     }
+    setMouseClick(true)
     setLastOpened(newCard)
     setNewCard(false)
     setModalPosition({ x: event.clientX, y: event.clientY });
@@ -38,6 +44,7 @@ const Home: NextPage = () => {
     if (event.target !== event.currentTarget) {
       return;
     }
+    setMouseClick(false)
     const deltaX = Math.abs(event.clientX - modalPosition.x);
     const deltaY = Math.abs(event.clientY - modalPosition.y);
     // change all these delta thing to be use for selection later
@@ -67,6 +74,10 @@ const Home: NextPage = () => {
     }
   }, [user.isLoaded, remoteNotes.data, shouldRun])
 
+  useEffect(() => {
+    if (headerCreateClicked) setNewCard(false)
+  }, [headerCreateClicked])
+
   const noteSpring = useSpring({
     from: { opacity: 0, scale: 0.9 },
     to: { opacity: newCard ? 1 : 0, scale: newCard ? 1 : 0.9, left: modalPosition.x, top: modalPosition.y },
@@ -91,7 +102,10 @@ const Home: NextPage = () => {
 
       if (user.user) {
         mergedNotes = mergedNotes.filter(note => note.authorId !== '0')
+      } else {
+        mergedNotes = mergedNotes.filter(note => note.authorId === '0')
       }
+
     }
 
     setNotes(mergedNotes)
@@ -106,7 +120,7 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <Header />
+      <Header mouseClickedMain={mouseClick} createClicked={setHeaderClicked} />
       <main className="flex h-full min-h-screen flex-col bg overflow-auto" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
         {shouldRenderNotes &&
           notes.map(note => {
