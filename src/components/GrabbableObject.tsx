@@ -63,7 +63,8 @@ const GrabbableObject = (props: Props) => {
             positionX: x.get(),
             positionY: y.get(),
             authorId: user.user.id,
-            createdAt: props.createdAt
+            createdAt: props.createdAt,
+            updatedAt: null
           }
 
           if (currInLocalNote.authorId === '0') {
