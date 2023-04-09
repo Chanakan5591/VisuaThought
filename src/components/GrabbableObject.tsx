@@ -7,6 +7,7 @@ import React from 'react'
 import useSound from 'use-sound'
 import { getNotesLocal, saveNotesLocal } from '~/localstorage/noteStore'
 import { api } from '~/utils/api'
+import { createId } from '@paralleldrive/cuid2'
 
 interface Props {
   title: string,
@@ -52,16 +53,34 @@ const GrabbableObject = (props: Props) => {
         currInLocalNote.positionY = y.get()
         notes[currInLocalNoteIdx] = currInLocalNote
 
-        saveNotesLocal(notes)
         if (user.user) {
-          mutate({
+          let n = {
             id: props.id,
-            notes: {
-              positionX: x.get(),
-              positionY: y.get()
-            }
-          })
+            title: props.title,
+            content: props.body,
+            positionX: x.get(),
+            positionY: y.get(),
+            authorId: user.user.id
+
+          }
+
+          if (currInLocalNote.authorId == 0) {
+            n.id = createId()
+            mutate({
+              id: n.id,
+              notes: n
+            })
+
+            notes[currInLocalNoteIdx] = n
+          } else {
+            mutate({
+              id: props.id,
+              notes: n
+            })
+          }
         }
+        saveNotesLocal(notes)
+
       }
     }
   })

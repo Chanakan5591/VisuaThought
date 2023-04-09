@@ -22,6 +22,8 @@ const Home: NextPage = () => {
   const [newCard, setNewCard] = useState(false)
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
   const [lastOpened, setLastOpened] = useState(false)
+  const [shouldRenderNotes, setRenderNotes] = useState(false)
+  const [shouldRun, setShouldRun] = useState(true)
 
 
   const handleMouseDown = (event) => {
@@ -58,6 +60,13 @@ const Home: NextPage = () => {
     remoteNotes = api.notes.getDefaultNotes.useQuery();
   }
 
+  useEffect(() => {
+    if (shouldRun && user.isLoaded && remoteNotes.data) {
+      setRenderNotes(true)
+      setShouldRun(false)
+    }
+  }, [user.isLoaded, remoteNotes.data, shouldRun])
+
   const noteSpring = useSpring({
     from: { opacity: 0, scale: 0.9 },
     to: { opacity: newCard ? 1 : 0, scale: newCard ? 1 : 0.9, left: modalPosition.x, top: modalPosition.y },
@@ -68,7 +77,7 @@ const Home: NextPage = () => {
   useEffect(() => {
     if (!remoteNotes.data) return
     const localNotes: Notes[] = (getNotesLocal() as Notes[])
-    const mergedNotes = [...localNotes]
+    let mergedNotes = [...localNotes]
 
     const existingIds = new Set(localNotes.map(note => note.id))
 
@@ -79,6 +88,10 @@ const Home: NextPage = () => {
           existingIds.add(remoteNote.id)
         }
       })
+
+      if (user.user) {
+        mergedNotes = mergedNotes.filter(note => note.authorId != 0)
+      }
     }
 
     setNotes(mergedNotes)
@@ -95,11 +108,12 @@ const Home: NextPage = () => {
 
       <Header />
       <main className="flex h-full min-h-screen flex-col bg overflow-auto" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
-        {notes.map(note => {
-          return (
-            <GrabbableObject title={note.title} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} />
-          )
-        })}
+        {shouldRenderNotes &&
+          notes.map(note => {
+            return (
+              <GrabbableObject title={note.title} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} />
+            )
+          })}
 
         {newCard &&
           <animated.div style={noteSpring} className={`card-modal absolute`} >

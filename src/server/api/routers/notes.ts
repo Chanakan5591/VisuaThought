@@ -3,11 +3,12 @@ import { z } from "zod";
 import { createTRPCRouter, privateProcedure, publicProcedure } from "~/server/api/trpc";
 
 const Note = z.object({
-  title: z.string().optional(),
-  content: z.string().optional(),
-  positionX: z.number().optional(),
-  positionY: z.number().optional(),
-  authorId: z.string().optional()
+  id: z.string(),
+  title: z.string(),
+  content: z.string(),
+  positionX: z.number(),
+  positionY: z.number(),
+  authorId: z.string()
 })
 
 export const notesRouter = createTRPCRouter({
@@ -39,15 +40,24 @@ export const notesRouter = createTRPCRouter({
   storeNote: privateProcedure
     .input(z.object({ id: z.string(), notes: Note }))
     .mutation(async ({ ctx, input }) => {
-      const note = await ctx.prisma.notes.update({
+      const note = await ctx.prisma.notes.upsert({
         where: {
           id: input.id
         },
-        data: {
+        update: {
+          id: input.id,
           title: input.notes.title,
           content: input.notes.content,
           positionX: input.notes.positionX,
           positionY: input.notes.positionY
+        },
+        create: {
+          id: input.id,
+          title: input.notes.title,
+          content: input.notes.content,
+          positionX: input.notes.positionX,
+          positionY: input.notes.positionY,
+          authorId: input.notes.authorId
         }
       })
       return note
