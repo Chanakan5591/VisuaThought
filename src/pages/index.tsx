@@ -136,9 +136,10 @@ const Home: NextPage = () => {
     if (remoteNotes.data) {
       remoteNotes.data?.forEach((remoteNote: Notes) => {
         const existingNote = existingNotes.get(remoteNote.id)
-        if (!existingNote || new Date(remoteNote.updatedAt) > new Date(existingNote.updatedAt)) {
-          existingNotes.set(remoteNote.id, remoteNote)
-        }
+
+          if (!existingNote || remoteNote.updatedAt > existingNote.updatedAt) {
+            existingNotes.set(remoteNote.id, remoteNote)
+          }
       })
 
       localNotes.forEach((localNote: Notes) => {
