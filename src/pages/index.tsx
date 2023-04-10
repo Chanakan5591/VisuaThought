@@ -74,12 +74,12 @@ const Home: NextPage = () => {
       const newId = createId()
       const note = {
         id: newId,
-        title: undefined,
+        title: null,
         content: createValue,
         positionX: modalPosition.x,
         positionY: modalPosition.y,
         createdAt: new Date(),
-        updatedAt: undefined,
+        updatedAt: null,
         authorId: user.user ? user.user.id : '0'
       }
 

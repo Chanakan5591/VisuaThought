@@ -4,7 +4,7 @@ import { createTRPCRouter, privateProcedure, publicProcedure } from "~/server/ap
 
 const Note = z.object({
   id: z.string(),
-  title: z.string().optional(),
+  title: z.string().optional().nullable(),
   content: z.string(),
   positionX: z.number(),
   positionY: z.number()
