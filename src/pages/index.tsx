@@ -28,6 +28,7 @@ const Home: NextPage = () => {
   const [mouseClick, setMouseClick] = useState(false)
   const [headerCreateClicked, setCreateClicked] = useState(false)
   const [createValue, setCreateValue] = useState('')
+  const [prevUserState, setPrevUserState] = useState(false)
   const { mutate } = api.notes.storeNote.useMutation({
     onSuccess: () => {
       //placeholder success
@@ -141,27 +142,48 @@ const Home: NextPage = () => {
           existingNotes.set(remoteNote.id, remoteNote)
         }
       })
-
-      localNotes.forEach((localNote: Notes) => {
-        const existingNote = existingNotes.get(localNote.id)
-        if (!existingNote || (localNote.updatedAt ?? localNote.createdAt) > (existingNote.createdAt ?? existingNote.createdAt)) {
-          existingNotes.set(localNote.id, localNote)
-        }
-      })
-
-      mergedNotes = [...existingNotes.values()]
-
-      if (user.user) {
-        mergedNotes = mergedNotes.filter(note => note.authorId !== '0')
-      } else {
-        mergedNotes = mergedNotes.filter(note => note.authorId === '0')
+    }
+    localNotes.forEach((localNote: Notes) => {
+      const existingNote = existingNotes.get(localNote.id)
+      if (!existingNote || (localNote.updatedAt ?? localNote.createdAt) > (existingNote.createdAt ?? existingNote.createdAt)) {
+        existingNotes.set(localNote.id, localNote)
       }
-      setNotes(mergedNotes)
-      saveNotesLocal(mergedNotes)
+    })
 
+    mergedNotes = [...existingNotes.values()]
+
+    if (user.user) {
+      let defaultToUserNotes = mergedNotes
+      if (!prevUserState) {
+        defaultToUserNotes = mergedNotes.map(note => {
+          if (note.authorId === '0') {
+            const n = {
+              ...note,
+              authorId: user.user.id,
+              id: createId()
+            }
+
+            mutate({
+              id: n.id,
+              notes: n
+            })
+            return n
+          } else return note
+        })
+
+        setPrevUserState(true)
+      }
+      mergedNotes = defaultToUserNotes.filter(note => note.authorId !== '0') // the local notes used to have a card with default author, so filter it out
+
+    } else {
+      if (prevUserState) setPrevUserState(false)
+      mergedNotes = mergedNotes.filter(note => note.authorId === '0') // user might have logged out so clear any of the users notes
     }
 
-  }, [remoteNotes?.data, user.user, localStateNotes])
+    setNotes(mergedNotes)
+    saveNotesLocal(mergedNotes)
+
+  }, [remoteNotes?.data, user.user, localStateNotes, mutate, prevUserState])
 
 
   return (
