@@ -186,7 +186,7 @@ const Home: NextPage = () => {
           <animated.div style={noteSpring} className={`card-modal absolute`} >
             <Card variant='shadow' style={{ display: 'inline-block', width: 'auto', border: '1px solid #0006' }}>
               <Card.Body>
-                <Input label='yo' onKeyDown={handleKeyDown} onChange={(e) => setCreateValue(e.target.value)} placeholder='Jot down your mind!' />
+                <Input onKeyDown={handleKeyDown} onChange={(e) => setCreateValue(e.target.value)} placeholder='Jot down your mind!' />
               </Card.Body>
               <Card.Divider />
               <Card.Body css={{ py: "$6", height: '100%' }}>
