@@ -29,6 +29,7 @@
     "next": "^13.2.4",
     "react": "18.2.0",
     "react-dom": "18.2.0",
+    "react-hot-toast": "^2.4.0",
     "rehype-format": "^4.0.1",
     "rehype-stringify": "^9.0.3",
     "rehype-wrap": "^1.1.0",

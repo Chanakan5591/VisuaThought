@@ -1,4 +1,3 @@
-import { type NextPage } from "next";
 import Head from "next/head";
 import Header from "~/components/Header";
 import { Card, Row, Textarea } from "@nextui-org/react";
@@ -20,6 +19,7 @@ import { visit } from 'unist-util-visit'
 import { remove } from 'unist-util-remove'
 import remark2rehype from 'remark-rehype'
 import stringify from 'rehype-stringify'
+import { Toaster, toast } from "react-hot-toast";
 
 interface DispNote extends Notes {
   title?: string,
@@ -31,9 +31,10 @@ const remarkProcessor = unified()
   .use(remark2rehype)
   .use(stringify)
 
-const Home: NextPage = () => {
+const Home = () => {
 
   const user = useUser()
+
   const [notesState, setNotes] = useState<DispNote[]>([])
   const [localStateNotes, setLocalNotes] = useState<Notes[]>([])
   const [newCard, setNewCard] = useState(false)
@@ -45,13 +46,25 @@ const Home: NextPage = () => {
   const [headerCreateClicked, setCreateClicked] = useState(false)
   const [createValue, setCreateValue] = useState('')
   const [prevUserState, setPrevUserState] = useState(false)
-  const { mutate } = api.notes.storeNote.useMutation({
-    onSuccess: () => {
-      //placeholder success
+  const [shouldUpdateLocal, setShouldUpdateLocal] = useState(true)
+  const [userToInitialize, SetUserInitialized] = useState(false)
+  const { mutate: storeNote } = api.notes.storeNote.useMutation({
+    onError: (err) => {
+      const errorMsg = err.data?.zodError?.fieldErrors.content
+      if (errorMsg && errorMsg[0]) {
+        toast.error(errorMsg[0])
+      } else toast.error('Unable to save notes to the cloud')
     }
   })
 
-
+  const { mutate: updateUserMetadata } = api.notes.updateUserInitialized.useMutation({
+    onError: (err) => {
+      const errorMsg = err.data?.zodError?.fieldErrors.content
+      if (errorMsg && errorMsg[0]) {
+        toast.error(errorMsg[0])
+      } else toast.error('Unable to initialize the user')
+    }
+  })
 
   const setHeaderClicked = (value: boolean) => {
     setCreateClicked(value)
@@ -99,6 +112,7 @@ const Home: NextPage = () => {
         positionY: modalPosition.y,
         createdAt: new Date(),
         updatedAt: null,
+        isDefault: false,
         authorId: user.user ? user.user.id : '0'
       }
 
@@ -108,8 +122,7 @@ const Home: NextPage = () => {
       setLocalNotes(notes)
 
       if (user.user) {
-        mutate({
-          id: newId,
+        storeNote({
           notes: note
         })
       }
@@ -121,7 +134,7 @@ const Home: NextPage = () => {
 
   let remoteNotes: RemoteNotes
   if (user.user) {
-    remoteNotes = api.notes.getNotes.useQuery({ userId: user.user.id });
+    remoteNotes = api.notes.getNotes.useQuery();
   } else {
     remoteNotes = api.notes.getDefaultNotes.useQuery();
   }
@@ -144,19 +157,28 @@ const Home: NextPage = () => {
   })
 
   useEffect(() => {
-    setLocalNotes(getNotesLocal())
-  }, [])
+    if (shouldUpdateLocal) {
+      setShouldUpdateLocal(false)
+      setLocalNotes(getNotesLocal())
+    }
+  }, [shouldUpdateLocal])
 
   useEffect(() => {
     if (!remoteNotes.data || !user.isLoaded) return
     const localNotes: Notes[] = localStateNotes
 
     const existingNotes = new Map(localNotes.map((note: Notes) => [note.id, note]))
-    let mergedNotes
+    let mergedNotes: Notes[]
+
+    localNotes.forEach((localNote: Notes) => {
+      const existingNote = existingNotes.get(localNote.id)
+      if (!existingNote || (localNote.updatedAt ?? localNote.createdAt) > (existingNote.createdAt ?? existingNote.createdAt)) {
+        existingNotes.set(localNote.id, localNote)
+      }
+    })
 
     if (remoteNotes.data) {
       remoteNotes.data?.forEach((remoteNote: Notes) => {
-        if (user.user && remoteNote.authorId === '0') return
         const existingNote = existingNotes.get(remoteNote.id)
         if (!existingNote || (remoteNote.updatedAt ?? remoteNote.createdAt) > (existingNote.updatedAt ?? existingNote.createdAt)) {
           existingNotes.set(remoteNote.id, remoteNote)
@@ -164,23 +186,47 @@ const Home: NextPage = () => {
       })
     }
 
-    localNotes.forEach((localNote: Notes) => {
-      if (user.user && localNote.authorId === '0') return
-      const existingNote = existingNotes.get(localNote.id)
-      if (!existingNote || (localNote.updatedAt ?? localNote.createdAt) > (existingNote.createdAt ?? existingNote.createdAt)) {
-        existingNotes.set(localNote.id, localNote)
-      }
-    })
-
     mergedNotes = [...existingNotes.values()]
+    if (user.isSignedIn) {
+      if (!prevUserState) {
+        localNotes.forEach((note) => {
+          if (note.authorId === '0') {
+            if (note.isDefault) {
+              if (user.user.publicMetadata.hasOwnProperty('userInitialized') && user.user.publicMetadata.userInitialized as boolean) return
+              SetUserInitialized(true)
+            }
+            // mutate to server then save to mergednotes
+            const nid = createId()
+            const defToUserNote = {
+              ...note,
+              id: nid,
+              authorId: user.user.id
+            }
 
-    if (user.user) {
-      setPrevUserState(true)
+            storeNote({
+              notes: defToUserNote
+            })
+
+            mergedNotes.push(defToUserNote)
+          }
+        })
+        setPrevUserState(true)
+      }
       mergedNotes = mergedNotes.filter(note => note.authorId !== '0')
+      setShouldUpdateLocal(true)
+      if (userToInitialize) {
+        SetUserInitialized(false)
+        updateUserMetadata({
+          initialized: true
+        })
+      }
     } else {
       if (prevUserState) setPrevUserState(false)
       mergedNotes = mergedNotes.filter(note => note.authorId === '0') // user might have logged out so clear any of the users notes
     }
+
+    saveNotesLocal(mergedNotes)
+
     const dispNote = mergedNotes.map(n => {
       const note = { ...n } as DispNote
       const ast = remarkProcessor.parse(note.content)
@@ -202,9 +248,7 @@ const Home: NextPage = () => {
     })
 
     setNotes(dispNote)
-    saveNotesLocal(mergedNotes)
-
-  }, [remoteNotes?.data, user.user, localStateNotes, mutate, prevUserState, user.isLoaded])
+  }, [remoteNotes?.data, user.isSignedIn, localStateNotes, storeNote, prevUserState, user.isLoaded, user.user?.id, updateUserMetadata, user.user?.publicMetadata, userToInitialize])
 
   return (
     <>
@@ -214,6 +258,7 @@ const Home: NextPage = () => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
+      <Toaster />
       <Header mouseClickedMain={mouseClick} createClicked={setHeaderClicked} />
       <main className="flex h-full min-h-screen flex-col bg overflow-auto" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
         {shouldRenderNotes &&

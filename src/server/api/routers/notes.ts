@@ -1,6 +1,7 @@
-import { z } from "zod";
-
+import { clerkClient } from "@clerk/nextjs/server";
 import { createTRPCRouter, privateProcedure, publicProcedure } from "~/server/api/trpc";
+
+import { z } from 'zod'
 
 const Note = z.object({
   id: z.string(),
@@ -10,10 +11,9 @@ const Note = z.object({
 })
 
 export const notesRouter = createTRPCRouter({
-  getNotes: publicProcedure
-    .input(z.object({ userId: z.string() }))
-    .query(({ ctx, input }) => {
-      const userId = input.userId
+  getNotes: privateProcedure
+    .query(({ ctx }) => {
+      const userId = ctx.userId
       const notes = ctx.prisma.notes.findMany(
         {
           where: {
@@ -34,22 +34,28 @@ export const notesRouter = createTRPCRouter({
 
       return defNotes
     }),
-
+  updateUserInitialized: privateProcedure
+    .input(z.object({ initialized: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      await clerkClient.users.updateUser(ctx.userId, { publicMetadata: {
+        userInitialized: input.initialized
+      }})
+    }),
   storeNote: privateProcedure
-    .input(z.object({ id: z.string(), notes: Note }))
+    .input(z.object({ notes: Note }))
     .mutation(async ({ ctx, input }) => {
       const note = await ctx.prisma.notes.upsert({
         where: {
-          id: input.id
+          id: input.notes.id
         },
         update: {
-          id: input.id,
+          id: input.notes.id,
           content: input.notes.content,
           positionX: input.notes.positionX,
           positionY: input.notes.positionY
         },
         create: {
-          id: input.id,
+          id: input.notes.id,
           content: input.notes.content,
           positionX: input.notes.positionX,
           positionY: input.notes.positionY,
