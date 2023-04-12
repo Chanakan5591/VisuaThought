@@ -1,7 +1,7 @@
 import { type NextPage } from "next";
 import Head from "next/head";
 import Header from "~/components/Header";
-import { Card, Input, Row } from "@nextui-org/react";
+import { Card, Row, Textarea } from "@nextui-org/react";
 
 import { api } from "~/utils/api";
 import GrabbableObject from "~/components/GrabbableObject";
@@ -14,11 +14,27 @@ import NavButton from "~/components/NavButton";
 //import Paint from "~/components/Painting";
 import type { UseTRPCQueryResult } from "@trpc/react-query/shared";
 import { createId } from "@paralleldrive/cuid2";
+import { unified } from 'unified'
+import remarkParse from 'remark-parse'
+import { visit } from 'unist-util-visit'
+import { remove } from 'unist-util-remove'
+import remark2rehype from 'remark-rehype'
+import stringify from 'rehype-stringify'
 
+interface DispNote extends Notes {
+  title?: string,
+  mdBody: string
+}
+
+const remarkProcessor = unified()
+  .use(remarkParse)
+  .use(remark2rehype)
+  .use(stringify)
 
 const Home: NextPage = () => {
+
   const user = useUser()
-  const [notes, setNotes] = useState<Notes[]>([])
+  const [notesState, setNotes] = useState<DispNote[]>([])
   const [localStateNotes, setLocalNotes] = useState<Notes[]>([])
   const [newCard, setNewCard] = useState(false)
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
@@ -34,6 +50,7 @@ const Home: NextPage = () => {
       //placeholder success
     }
   })
+
 
 
   const setHeaderClicked = (value: boolean) => {
@@ -71,11 +88,12 @@ const Home: NextPage = () => {
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.target !== event.currentTarget) return;
-    if (event.key === 'Enter') {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      setNewCard(false)
+      if (!createValue) return
       const newId = createId()
       const note = {
         id: newId,
-        title: null,
         content: createValue,
         positionX: modalPosition.x,
         positionY: modalPosition.y,
@@ -95,6 +113,8 @@ const Home: NextPage = () => {
           notes: note
         })
       }
+
+      setCreateValue('') // fix this idk what this do, the notes are still saved in html instead of markdown
     }
   }
   type RemoteNotes = UseTRPCQueryResult<Notes[], unknown>;
@@ -128,7 +148,7 @@ const Home: NextPage = () => {
   }, [])
 
   useEffect(() => {
-    if (!remoteNotes.data) return
+    if (!remoteNotes.data || !user.isLoaded) return
     const localNotes: Notes[] = localStateNotes
 
     const existingNotes = new Map(localNotes.map((note: Notes) => [note.id, note]))
@@ -136,14 +156,16 @@ const Home: NextPage = () => {
 
     if (remoteNotes.data) {
       remoteNotes.data?.forEach((remoteNote: Notes) => {
+        if (user.user && remoteNote.authorId === '0') return
         const existingNote = existingNotes.get(remoteNote.id)
-
         if (!existingNote || (remoteNote.updatedAt ?? remoteNote.createdAt) > (existingNote.updatedAt ?? existingNote.createdAt)) {
           existingNotes.set(remoteNote.id, remoteNote)
         }
       })
     }
+
     localNotes.forEach((localNote: Notes) => {
+      if (user.user && localNote.authorId === '0') return
       const existingNote = existingNotes.get(localNote.id)
       if (!existingNote || (localNote.updatedAt ?? localNote.createdAt) > (existingNote.createdAt ?? existingNote.createdAt)) {
         existingNotes.set(localNote.id, localNote)
@@ -153,38 +175,36 @@ const Home: NextPage = () => {
     mergedNotes = [...existingNotes.values()]
 
     if (user.user) {
-      let defaultToUserNotes = mergedNotes
-      if (!prevUserState) {
-        defaultToUserNotes = mergedNotes.map(note => {
-          if (note.authorId === '0') {
-            const n = {
-              ...note,
-              authorId: user.user.id,
-              id: createId()
-            }
-
-            mutate({
-              id: n.id,
-              notes: n
-            })
-            return n
-          } else return note
-        })
-
-        setPrevUserState(true)
-      }
-      mergedNotes = defaultToUserNotes.filter(note => note.authorId !== '0') // the local notes used to have a card with default author, so filter it out
-
+      setPrevUserState(true)
+      mergedNotes = mergedNotes.filter(note => note.authorId !== '0')
     } else {
       if (prevUserState) setPrevUserState(false)
       mergedNotes = mergedNotes.filter(note => note.authorId === '0') // user might have logged out so clear any of the users notes
     }
+    const dispNote = mergedNotes.map(n => {
+      const note = { ...n } as DispNote
+      const ast = remarkProcessor.parse(note.content)
+      let aTitle: string | undefined = undefined
+      visit(ast, 'heading', (node) => {
+        if (!aTitle) {
+          const child = node.children[0]
+          if (child && child.type === 'text') aTitle = child.value
+        }
+      })
 
-    setNotes(mergedNotes)
+      remove(ast, { type: 'heading', depth: 1 })
+      const htmlAst = remarkProcessor.runSync(ast)
+      const html = remarkProcessor.stringify(htmlAst)
+      note.title = aTitle
+      note.content = html
+      note.mdBody = n.content
+      return note
+    })
+
+    setNotes(dispNote)
     saveNotesLocal(mergedNotes)
 
-  }, [remoteNotes?.data, user.user, localStateNotes, mutate, prevUserState])
-
+  }, [remoteNotes?.data, user.user, localStateNotes, mutate, prevUserState, user.isLoaded])
 
   return (
     <>
@@ -197,18 +217,18 @@ const Home: NextPage = () => {
       <Header mouseClickedMain={mouseClick} createClicked={setHeaderClicked} />
       <main className="flex h-full min-h-screen flex-col bg overflow-auto" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
         {shouldRenderNotes &&
-          notes.map(note => {
-            const formattedDate = new Date(note.createdAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'long' });
+          notesState.map(note => {
+            //            const formattedDate = new Date(note.createdAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'long' });
 
             return (
-              <GrabbableObject title={note.title ? note.title : formattedDate} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} createdAt={note.createdAt} />)
+              <GrabbableObject title={note.title} mdBody={note.mdBody} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} createdAt={note.createdAt} />)
           })}
 
         {newCard &&
           <animated.div style={noteSpring} className={`card-modal absolute`} >
             <Card variant='shadow' style={{ display: 'inline-block', width: 'auto', border: '1px solid #0006' }}>
               <Card.Body>
-                <Input onKeyDown={handleKeyDown} onChange={(e) => setCreateValue(e.target.value)} placeholder='Jot down your mind!' />
+                <Textarea onKeyDown={handleKeyDown} onChange={(e) => setCreateValue(e.target.value)} placeholder='Jot down your mind!' />
               </Card.Body>
               <Card.Divider />
               <Card.Body css={{ py: "$6", height: '100%' }}>

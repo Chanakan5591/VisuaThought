@@ -11,8 +11,9 @@ import { createId } from '@paralleldrive/cuid2'
 import type { Notes } from '@prisma/client'
 
 interface Props {
-  title: string,
+  title?: string,
   body: string,
+  mdBody: string,
   startXPos: number,
   startYPos: number,
   id: string,
@@ -58,8 +59,7 @@ const GrabbableObject = (props: Props) => {
         if (user.user) {
           const n = {
             id: props.id,
-            title: props.title,
-            content: props.body,
+            content: props.mdBody,
             positionX: x.get(),
             positionY: y.get(),
             authorId: user.user.id,
@@ -89,22 +89,18 @@ const GrabbableObject = (props: Props) => {
   })
 
 
-
   return (
     <animated.div className='max-w-[400px] absolute' {...bind()} style={{ x, y, touchAction: 'none', cursor: 'pointer', userSelect: 'none', overflow: 'visible' }}>
       <Card variant={isDown ? 'shadow' : 'bordered'} style={{ width: 'auto' }}>
         <Card.Header>
           <Row justify='space-between' className='items-center'>
-            <Text b>{props.title}</Text>
-
+            <Text b>{props.title ? props.title : new Date(props.createdAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'long' })}</Text>
             <button className='ml-4 connector bg-transparent border-2 border-solid rounded-full w-4 h-4 cursor-cell'></button>
           </Row>
         </Card.Header>
         <Card.Divider />
         <Card.Body css={{ py: "$10", height: '100%' }}>
-          <Text>
-            {props.body}
-          </Text>
+          <div dangerouslySetInnerHTML={{ __html: props.body }}></div>
         </Card.Body>
       </Card>
     </animated.div>

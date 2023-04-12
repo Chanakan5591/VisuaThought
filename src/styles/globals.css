@@ -20,3 +20,8 @@
   cursor: -webkit-grabbing;
 }
 
+ul {
+  list-style: disc;
+  padding-left: 2em;
+}
+

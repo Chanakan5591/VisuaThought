@@ -4,7 +4,6 @@ import { createTRPCRouter, privateProcedure, publicProcedure } from "~/server/ap
 
 const Note = z.object({
   id: z.string(),
-  title: z.string().optional().nullable(),
   content: z.string(),
   positionX: z.number(),
   positionY: z.number()
@@ -45,14 +44,12 @@ export const notesRouter = createTRPCRouter({
         },
         update: {
           id: input.id,
-          title: input.notes.title,
           content: input.notes.content,
           positionX: input.notes.positionX,
           positionY: input.notes.positionY
         },
         create: {
           id: input.id,
-          title: input.notes.title,
           content: input.notes.content,
           positionX: input.notes.positionX,
           positionY: input.notes.positionY,
