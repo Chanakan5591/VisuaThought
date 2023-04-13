@@ -42,7 +42,10 @@ const GrabbableObject = (props: Props) => {
         } break;
         case 'UNAUTHORIZED': {
           toast.error('You need to be logged in to store notes on the cloud')
-        }
+        } break;
+        case 'TIMEOUT': {
+          toast.error('Timed out while connecting to the server')
+        } break;
       }
     }
   })

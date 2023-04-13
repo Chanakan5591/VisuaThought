@@ -66,7 +66,10 @@ const Home = () => {
           } break;
           case 'UNAUTHORIZED': {
             toast.error('You need to be logged in to store notes on the cloud')
-          }
+          } break;
+          case 'TIMEOUT': {
+            toast.error('Timed out while connecting to the server')
+          } break;
         }
       }
     }
@@ -86,6 +89,9 @@ const Home = () => {
           } break;
           case 'INTERNAL_SERVER_ERROR': {
             toast.error('An error occured while trying to save user information')
+          } break;
+          case 'TIMEOUT': {
+            toast.error('Timed out while connecting to the server')
           } break;
         }
       }
