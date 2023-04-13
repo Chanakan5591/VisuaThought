@@ -17,7 +17,8 @@ interface Props {
   startXPos: number,
   startYPos: number,
   id: string,
-  createdAt: Date
+  createdAt: Date,
+  isDefault: boolean
 }
 
 const GrabbableObject = (props: Props) => {
@@ -64,20 +65,19 @@ const GrabbableObject = (props: Props) => {
             positionY: y.get(),
             authorId: user.user.id,
             createdAt: props.createdAt,
-            updatedAt: null
+            updatedAt: null,
+            isDefault: props.isDefault
           }
 
           if (currInLocalNote.authorId === '0') {
             n.id = createId()
             mutate({
-              id: n.id,
               notes: n
             })
 
             notes[currInLocalNoteIdx] = n
           } else {
             mutate({
-              id: props.id,
               notes: n
             })
           }

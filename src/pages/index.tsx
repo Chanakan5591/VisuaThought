@@ -266,7 +266,7 @@ const Home = () => {
             //            const formattedDate = new Date(note.createdAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'long' });
 
             return (
-              <GrabbableObject title={note.title} mdBody={note.mdBody} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} createdAt={note.createdAt} />)
+              <GrabbableObject title={note.title} isDefault={note.isDefault} mdBody={note.mdBody} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} createdAt={note.createdAt} />)
           })}
 
         {newCard &&
