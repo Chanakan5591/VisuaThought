@@ -9,6 +9,7 @@ import { getNotesLocal, saveNotesLocal } from '~/localstorage/noteStore'
 import { api } from '~/utils/api'
 import { createId } from '@paralleldrive/cuid2'
 import type { Notes } from '@prisma/client'
+import { toast } from 'react-hot-toast'
 
 interface Props {
   title?: string,
@@ -31,8 +32,18 @@ const GrabbableObject = (props: Props) => {
   const [isDown, setDown] = useState(false)
   const [placeFX] = useSound('sounds/card-place.mp3')
   const { mutate } = api.notes.storeNote.useMutation({
-    onSuccess: () => {
-      null // placeholder for now
+    onError: (err) => {
+      switch(err?.data?.code) {
+        case 'TOO_MANY_REQUESTS': {
+          toast.error('You are being ratelimited')
+        } break;
+        case 'INTERNAL_SERVER_ERROR': {
+          toast.error('An error occured while trying to save notes')
+        } break;
+        case 'UNAUTHORIZED': {
+          toast.error('You need to be logged in to store notes on the cloud')
+        }
+      }
     }
   })
 

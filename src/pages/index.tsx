@@ -56,16 +56,39 @@ const Home = () => {
       const errorMsg = err.data?.zodError?.fieldErrors.content
       if (errorMsg && errorMsg[0]) {
         toast.error(errorMsg[0])
-      } else toast.error('Unable to save notes to the cloud')
+      } else {
+        switch(err?.data?.code) {
+          case 'TOO_MANY_REQUESTS': {
+            toast.error('You are being ratelimited')
+          } break;
+          case 'INTERNAL_SERVER_ERROR': {
+            toast.error('An error occured while trying to save notes')
+          } break;
+          case 'UNAUTHORIZED': {
+            toast.error('You need to be logged in to store notes on the cloud')
+          }
+        }
+      }
     }
   })
 
   const { mutate: updateUserMetadata } = api.notes.updateUserInitialized.useMutation({
     onError: (err) => {
+      console.log(err)
       const errorMsg = err.data?.zodError?.fieldErrors.content
+      console.error(errorMsg)
       if (errorMsg && errorMsg[0]) {
         toast.error(errorMsg[0])
-      } else toast.error('Unable to initialize the user')
+      } else {
+        switch(err?.data?.code) {
+          case 'TOO_MANY_REQUESTS': {
+            toast.error('You are being ratelimited')
+          } break;
+          case 'INTERNAL_SERVER_ERROR': {
+            toast.error('An error occured while trying to save user information')
+          } break;
+        }
+      }
     }
   })
 
@@ -160,6 +183,7 @@ const Home = () => {
               storeNote({
                 notes: n
               })
+
             }
             return n
           } else return note
