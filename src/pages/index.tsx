@@ -32,8 +32,7 @@ const remarkProcessor = unified()
   .use(stringify)
 
 const Home = () => {
-
-  const user = useUser()
+  const { isSignedIn, user, isLoaded: isClerkLoaded } = useUser()
 
   const [notesState, setNotes] = useState<DispNote[]>([])
   const [localStateNotes, setLocalNotes] = useState<Notes[]>([])
@@ -157,7 +156,7 @@ const Home = () => {
               positionY: modalPosition.y,
               updatedAt: new Date()
             }
-            if (user.user) {
+            if (user) {
               storeNote({
                 notes: n
               })
@@ -179,9 +178,9 @@ const Home = () => {
           createdAt: new Date(),
           updatedAt: null,
           isDefault: false,
-          authorId: user.user ? user.user.id : '0'
+          authorId: user ? user.id : '0'
         }
-        if (user.user) {
+        if (user) {
           storeNote({
             notes: note
           })
@@ -197,18 +196,18 @@ const Home = () => {
   type RemoteNotes = UseTRPCQueryResult<Notes[], unknown>;
 
   let remoteNotes: RemoteNotes
-  if (user.user) {
+  if (user) {
     remoteNotes = api.notes.getNotes.useQuery();
   } else {
     remoteNotes = api.notes.getDefaultNotes.useQuery();
   }
 
   useEffect(() => {
-    if (shouldRun && user.isLoaded && remoteNotes.data) {
+    if (shouldRun && isClerkLoaded && remoteNotes.data) {
       setRenderNotes(true)
       setShouldRun(false)
     }
-  }, [user.isLoaded, remoteNotes.data, shouldRun])
+  }, [isClerkLoaded, remoteNotes.data, shouldRun])
 
   useEffect(() => {
     if (headerCreateClicked) setEditCard(false)
@@ -228,7 +227,7 @@ const Home = () => {
   }, [shouldUpdateLocal])
 
   useEffect(() => {
-    if (!remoteNotes.data || !user.isLoaded) return
+    if (!remoteNotes.data || !isClerkLoaded) return
     const localNotes: Notes[] = localStateNotes
 
     const existingNotes = new Map(localNotes.map((note: Notes) => [note.id, note]))
@@ -251,12 +250,12 @@ const Home = () => {
     })
 
     mergedNotes = [...existingNotes.values()]
-    if (user.isSignedIn) {
+    if (isSignedIn) {
       if (!prevUserState) {
         localNotes.forEach((note) => {
           if (note.authorId === '0') {
             if (note.isDefault) {
-              if (user.user.publicMetadata.hasOwnProperty('userInitialized') && user.user.publicMetadata.userInitialized as boolean) return
+              if (user.publicMetadata.hasOwnProperty('userInitialized') && user.publicMetadata.userInitialized as boolean) return
               SetUserInitialized(true)
             }
             // mutate to server then save to mergednotes
@@ -264,7 +263,7 @@ const Home = () => {
             const defToUserNote = {
               ...note,
               id: nid,
-              authorId: user.user.id
+              authorId: user.id
             }
 
             storeNote({
@@ -313,7 +312,7 @@ const Home = () => {
     })
 
     setNotes(dispNote)
-  }, [remoteNotes?.data, user.isSignedIn, localStateNotes, storeNote, prevUserState, user.isLoaded, user.user?.id, updateUserMetadata, user.user?.publicMetadata, userToInitialize])
+  }, [remoteNotes?.data, isSignedIn, localStateNotes, storeNote, prevUserState, isClerkLoaded, user?.id, updateUserMetadata, user?.publicMetadata, userToInitialize])
 
   return (
     <>

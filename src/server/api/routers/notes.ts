@@ -10,6 +10,16 @@ const Note = z.object({
   positionY: z.number()
 })
 
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+import { TRPCError } from "@trpc/server";
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, "10 s"),
+  analytics: true
+})
+
 export const notesRouter = createTRPCRouter({
   getNotes: privateProcedure
     .query(({ ctx }) => {
@@ -44,6 +54,11 @@ export const notesRouter = createTRPCRouter({
   storeNote: privateProcedure
     .input(z.object({ notes: Note }))
     .mutation(async ({ ctx, input }) => {
+      const { success } = await ratelimit.limit(ctx.userId)
+
+      if(!success) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS" })
+      }
       const note = await ctx.prisma.notes.upsert({
         where: {
           id: input.notes.id

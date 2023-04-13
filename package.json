@@ -24,6 +24,8 @@
     "@trpc/next": "^10.18.0",
     "@trpc/react-query": "^10.18.0",
     "@trpc/server": "^10.18.0",
+    "@upstash/ratelimit": "^0.4.1",
+    "@upstash/redis": "^1.20.2",
     "@use-gesture/react": "^10.2.26",
     "lodash": "^4.17.21",
     "next": "^13.2.4",
