@@ -18,7 +18,9 @@ interface Props {
   startYPos: number,
   id: string,
   createdAt: Date,
-  isDefault: boolean
+  isDefault: boolean,
+  onMouseDown: (event: React.MouseEvent<HTMLElement>) => void,
+  onMouseUp: (event: React.MouseEvent<HTMLElement>) => void
 }
 
 const GrabbableObject = (props: Props) => {
@@ -90,7 +92,7 @@ const GrabbableObject = (props: Props) => {
 
 
   return (
-    <animated.div className='max-w-[400px] absolute' {...bind()} style={{ x, y, touchAction: 'none', cursor: 'pointer', userSelect: 'none', overflow: 'visible' }}>
+    <animated.div id={props.id} onMouseDown={props.onMouseDown} onMouseUp={props.onMouseUp} className='card max-w-[400px] absolute' {...bind()} style={{ x, y, touchAction: 'none', cursor: 'pointer', userSelect: 'none', overflow: 'visible' }}>
       <Card variant={isDown ? 'shadow' : 'bordered'} style={{ width: 'auto' }}>
         <Card.Header>
           <Row justify='space-between' className='items-center'>

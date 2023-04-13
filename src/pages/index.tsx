@@ -5,7 +5,7 @@ import { Card, Row, Textarea } from "@nextui-org/react";
 import { api } from "~/utils/api";
 import GrabbableObject from "~/components/GrabbableObject";
 import { useUser } from "@clerk/nextjs";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { saveNotesLocal, getNotesLocal } from "~/localstorage/noteStore";
 import type { Notes } from "@prisma/client";
 import { useSpring, animated } from "@react-spring/web";
@@ -37,7 +37,7 @@ const Home = () => {
 
   const [notesState, setNotes] = useState<DispNote[]>([])
   const [localStateNotes, setLocalNotes] = useState<Notes[]>([])
-  const [newCard, setNewCard] = useState(false)
+  const [editCard, setEditCard] = useState(false)
   const [modalPosition, setModalPosition] = useState({ x: 0, y: 0 });
   const [lastOpened, setLastOpened] = useState(false)
   const [shouldRenderNotes, setRenderNotes] = useState(false)
@@ -48,6 +48,10 @@ const Home = () => {
   const [prevUserState, setPrevUserState] = useState(false)
   const [shouldUpdateLocal, setShouldUpdateLocal] = useState(true)
   const [userToInitialize, SetUserInitialized] = useState(false)
+  const [editNoteInitial, setEditInitial] = useState('')
+  const [clickedId, setClickedId] = useState('')
+  const [mergedStateNote, setMergedNote] = useState<Notes[]>([])
+  const mainRef = useRef<HTMLDivElement>(null)
   const { mutate: storeNote } = api.notes.storeNote.useMutation({
     onError: (err) => {
       const errorMsg = err.data?.zodError?.fieldErrors.content
@@ -71,17 +75,43 @@ const Home = () => {
   }
 
   const handleMouseDown = (event: React.MouseEvent<HTMLElement>) => {
-    if (event.target !== event.currentTarget) {
+    let target = event.target as HTMLElement
+    let targetModal = event.target as HTMLElement
+
+    while (target !== null && target instanceof Element && !target.classList.contains("card")) {
+      target = target.parentNode as HTMLElement
+    }
+
+    while (targetModal !== null && targetModal instanceof Element && !targetModal.classList.contains("card-modal")) {
+      targetModal = targetModal.parentNode as HTMLElement
+    }
+
+    if ((event.target !== mainRef.current && !target) || (targetModal instanceof Element && targetModal)) {
       return;
     }
+
+    const scrollX = window.scrollX || window.pageXOffset // fix: both of this returns 0 all the times
+    const scrollY = window.scrollY || window.pageYOffset // fix: both of this returns 0 all the times
+
     setMouseClick(true)
-    setLastOpened(newCard)
-    setNewCard(false)
-    setModalPosition({ x: event.clientX, y: event.clientY });
+    setLastOpened(editCard)
+    setEditCard(false)
+    setModalPosition({ x: event.clientX + scrollX, y: event.clientY + scrollY });
   };
 
   const handleMouseUp = (event: React.MouseEvent<HTMLElement>) => {
-    if (event.target !== event.currentTarget) {
+    let target = event.target as HTMLElement
+    let targetModal = event.target as HTMLElement
+
+    while (target !== null && target instanceof Element && !target.classList.contains("card")) {
+      target = target.parentNode as HTMLElement
+    }
+
+    while (targetModal !== null && targetModal instanceof Element && !targetModal.classList.contains("card-modal")) {
+      targetModal = targetModal.parentNode as HTMLElement
+    }
+
+    if ((event.target !== mainRef.current && !target) || (targetModal instanceof Element && targetModal)) {
       return;
     }
     setMouseClick(false)
@@ -89,45 +119,79 @@ const Home = () => {
     const deltaY = Math.abs(event.clientY - modalPosition.y);
     // change all these delta thing to be use for selection later
     if (lastOpened) {
-      setNewCard(false)
+      setEditCard(false)
       setLastOpened(false)
     } else if (deltaX < 5 && deltaY < 5) {
-      setNewCard(true)
+      const t = target
+      const id = t.id
+
+      if (event.target !== mainRef.current && id) {
+        const note = mergedStateNote.find(n => n.id === id)
+        if(note?.content)
+          setEditInitial(note?.content)
+        setClickedId(target.id)
+      }
+      if (event.target === mainRef.current)
+        setEditInitial('')
+      setEditCard(true)
     } else {
       setModalPosition({ x: 0, y: 0 });
-      setNewCard(false)
+      setEditCard(false)
     }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.target !== event.currentTarget) return;
     if (event.key === 'Enter' && !event.shiftKey) {
-      setNewCard(false)
+      setEditCard(false)
       if (!createValue) return
-      const newId = createId()
-      const note = {
-        id: newId,
-        content: createValue,
-        positionX: modalPosition.x,
-        positionY: modalPosition.y,
-        createdAt: new Date(),
-        updatedAt: null,
-        isDefault: false,
-        authorId: user.user ? user.user.id : '0'
-      }
 
       const notes: Notes[] = getNotesLocal()
-      notes.push(note)
-      saveNotesLocal(notes)
-      setLocalNotes(notes)
-
-      if (user.user) {
-        storeNote({
-          notes: note
+      if (clickedId) {
+        const updatedNotes = notes.map((note) => {
+          if (note.id === clickedId) {
+            const n = {
+              ...note,
+              content: createValue,
+              positionX: modalPosition.x,
+              positionY: modalPosition.y,
+              updatedAt: new Date()
+            }
+            if (user.user) {
+              storeNote({
+                notes: n
+              })
+            }
+            return n
+          } else return note
         })
+
+        saveNotesLocal(updatedNotes)
+        setLocalNotes(updatedNotes)
+        setClickedId('')
+      } else {
+        const newId = createId()
+        const note = {
+          id: newId,
+          content: createValue,
+          positionX: modalPosition.x,
+          positionY: modalPosition.y,
+          createdAt: new Date(),
+          updatedAt: null,
+          isDefault: false,
+          authorId: user.user ? user.user.id : '0'
+        }
+        if (user.user) {
+          storeNote({
+            notes: note
+          })
+        }
+        notes.push(note)
+        saveNotesLocal(notes)
+        setLocalNotes(notes)
       }
 
-      setCreateValue('') // fix this idk what this do, the notes are still saved in html instead of markdown
+      setCreateValue('')
     }
   }
   type RemoteNotes = UseTRPCQueryResult<Notes[], unknown>;
@@ -147,12 +211,12 @@ const Home = () => {
   }, [user.isLoaded, remoteNotes.data, shouldRun])
 
   useEffect(() => {
-    if (headerCreateClicked) setNewCard(false)
+    if (headerCreateClicked) setEditCard(false)
   }, [headerCreateClicked])
 
   const noteSpring = useSpring({
     from: { opacity: 0, scale: 0.9 },
-    to: { opacity: newCard ? 1 : 0, scale: newCard ? 1 : 0.9, left: modalPosition.x, top: modalPosition.y },
+    to: { opacity: editCard ? 1 : 0, scale: editCard ? 1 : 0.9, left: modalPosition.x, top: modalPosition.y },
     config: { tension: 200, friction: 20 },
   })
 
@@ -225,6 +289,7 @@ const Home = () => {
       mergedNotes = mergedNotes.filter(note => note.authorId === '0') // user might have logged out so clear any of the users notes
     }
 
+    setMergedNote(mergedNotes)
     saveNotesLocal(mergedNotes)
 
     const dispNote = mergedNotes.map(n => {
@@ -260,20 +325,20 @@ const Home = () => {
 
       <Toaster />
       <Header mouseClickedMain={mouseClick} createClicked={setHeaderClicked} />
-      <main className="flex h-full min-h-screen flex-col bg overflow-auto" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
+      <main ref={mainRef} className="flex h-full min-h-screen flex-col bg overflow-scroll" onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
         {shouldRenderNotes &&
           notesState.map(note => {
             //            const formattedDate = new Date(note.createdAt).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'long' });
 
             return (
-              <GrabbableObject title={note.title} isDefault={note.isDefault} mdBody={note.mdBody} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} createdAt={note.createdAt} />)
+              <GrabbableObject onMouseDown={handleMouseDown} onMouseUp={handleMouseUp} title={note.title} isDefault={note.isDefault} mdBody={note.mdBody} body={note.content} startXPos={note.positionX} startYPos={note.positionY} key={note.id} id={note.id} createdAt={note.createdAt} />)
           })}
 
-        {newCard &&
+        {editCard &&
           <animated.div style={noteSpring} className={`card-modal absolute`} >
             <Card variant='shadow' style={{ display: 'inline-block', width: 'auto', border: '1px solid #0006' }}>
               <Card.Body>
-                <Textarea onKeyDown={handleKeyDown} onChange={(e) => setCreateValue(e.target.value)} placeholder='Jot down your mind!' />
+                <Textarea initialValue={editNoteInitial} onKeyDown={handleKeyDown} onChange={(e) => setCreateValue(e.target.value)} placeholder='Jot down your mind!' />
               </Card.Body>
               <Card.Divider />
               <Card.Body css={{ py: "$6", height: '100%' }}>
