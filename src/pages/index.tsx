@@ -234,13 +234,6 @@ const Home = () => {
     const existingNotes = new Map(localNotes.map((note: Notes) => [note.id, note]))
     let mergedNotes: Notes[]
 
-    localNotes.forEach((localNote: Notes) => {
-      const existingNote = existingNotes.get(localNote.id)
-      if (!existingNote || (localNote.updatedAt ?? localNote.createdAt) > (existingNote.createdAt ?? existingNote.createdAt)) {
-        existingNotes.set(localNote.id, localNote)
-      }
-    })
-
     if (remoteNotes.data) {
       remoteNotes.data?.forEach((remoteNote: Notes) => {
         const existingNote = existingNotes.get(remoteNote.id)
@@ -249,6 +242,13 @@ const Home = () => {
         }
       })
     }
+
+    localNotes.forEach((localNote: Notes) => {
+      const existingNote = existingNotes.get(localNote.id)
+      if (!existingNote || (localNote.updatedAt ?? localNote.createdAt) > (existingNote.createdAt ?? existingNote.createdAt)) {
+        existingNotes.set(localNote.id, localNote)
+      }
+    })
 
     mergedNotes = [...existingNotes.values()]
     if (user.isSignedIn) {
