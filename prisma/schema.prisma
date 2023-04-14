@@ -17,7 +17,7 @@ model Notes {
     updatedAt DateTime? @updatedAt
     isDefault   Boolean @default(false)
 
-    content String @db.VarChar(255)
+    content String @db.LongText
     authorId String
     positionX Float @default(16)
     positionY Float @default(24)
