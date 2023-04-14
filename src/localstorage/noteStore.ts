@@ -15,5 +15,5 @@ export const setLocalInitialized = (value: boolean) => {
 }
 
 export const getLocalInitialized = () => {
-  return getCookie('defaultInitialized')
+  return (getCookie('defaultInitialized') === 'true')
 }

@@ -254,7 +254,7 @@ const Home = () => {
       const updatedNotes = notes.filter(n => n.id !== clickedId)
       setEditCard(false)
 
-      if(user) {
+      if(isSignedIn) {
         deleteNote({
           noteId: clickedId
         })
@@ -276,7 +276,7 @@ const Home = () => {
   type RemoteNotes = UseTRPCQueryResult<Notes[], unknown>;
 
   let remoteNotes: RemoteNotes
-  if (user) {
+  if (isSignedIn) {
     remoteNotes = api.notes.getNotes.useQuery();
   } else {
     remoteNotes = api.notes.getDefaultNotes.useQuery();
@@ -313,7 +313,7 @@ const Home = () => {
     const existingNotes = new Map(localNotes.map((note: Notes) => [note.id, note]))
     let mergedNotes: Notes[]
 
-    if(user || !getLocalInitialized()) {
+    if(isSignedIn || !getLocalInitialized()) {
       if (remoteNotes.data) {
         remoteNotes.data?.forEach((remoteNote: Notes) => {
           const existingNote = existingNotes.get(remoteNote.id)
@@ -323,7 +323,10 @@ const Home = () => {
         })
       }
 
-      if(!user) setLocalInitialized(true)
+      if(!isSignedIn) {
+        saveNotesLocal(existingNotes)
+        setLocalInitialized(true)
+      }
     }
 
     localNotes.forEach((localNote: Notes) => {
