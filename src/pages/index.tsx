@@ -15,6 +15,7 @@ import type { UseTRPCQueryResult } from "@trpc/react-query/shared";
 import { createId } from "@paralleldrive/cuid2";
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
+import remarkGfm from 'remark-gfm'
 import { visit } from 'unist-util-visit'
 import { remove } from 'unist-util-remove'
 import remark2rehype from 'remark-rehype'
@@ -28,6 +29,7 @@ interface DispNote extends Notes {
 
 const remarkProcessor = unified()
   .use(remarkParse)
+  .use(remarkGfm)
   .use(remark2rehype)
   .use(stringify)
 
