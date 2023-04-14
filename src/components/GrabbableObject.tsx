@@ -34,9 +34,6 @@ const GrabbableObject = (props: Props) => {
   const { mutate } = api.notes.storeNote.useMutation({
     onError: (err) => {
       switch(err?.data?.code) {
-        case 'TOO_MANY_REQUESTS': {
-          toast.error('You are being ratelimited')
-        } break;
         case 'INTERNAL_SERVER_ERROR': {
           toast.error('An error occured while trying to save notes')
         } break;

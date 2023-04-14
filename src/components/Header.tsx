@@ -35,7 +35,7 @@ const Header = (props: Props) => {
 
 
   return (
-    <header className='fixed w-full p-2 z-20 flex mx-auto'>
+    <header className='fixed w-full p-2 z-20 flex mx-auto backdrop-blur-[2px] bg-white-50 bg-opacity-90'>
       <nav className='w-full justify-between flex items-center'>
         <div className='flex items-center'>
           <h2 className='font-semibold tracking-lighter text-lg mr-2'>VisuaThought</h2>
