@@ -6,7 +6,7 @@ import { api } from "~/utils/api";
 import GrabbableObject from "~/components/GrabbableObject";
 import { useUser } from "@clerk/nextjs";
 import React, { useState, useEffect, useRef } from "react";
-import { saveNotesLocal, getNotesLocal } from "~/localstorage/noteStore";
+import { saveNotesLocal, getNotesLocal, getLocalInitialized, setLocalInitialized } from "~/localstorage/noteStore";
 import type { Notes } from "@prisma/client";
 import { useSpring, animated } from "@react-spring/web";
 import NavButton from "~/components/NavButton";
@@ -79,7 +79,30 @@ const Home = () => {
     onError: (err) => {
       console.log(err)
       const errorMsg = err.data?.zodError?.fieldErrors.content
-      console.error(errorMsg)
+
+      if (errorMsg && errorMsg[0]) {
+        toast.error(errorMsg[0])
+      } else {
+        switch(err?.data?.code) {
+          case 'TOO_MANY_REQUESTS': {
+            toast.error('You are being ratelimited')
+          } break;
+          case 'INTERNAL_SERVER_ERROR': {
+            toast.error('An error occured while trying to save user information')
+          } break;
+          case 'TIMEOUT': {
+            toast.error('Timed out while connecting to the server')
+          } break;
+        }
+      }
+    }
+  })
+
+  const { mutate: deleteNote } = api.notes.deleteNote.useMutation({
+    onError: (err) => {
+      console.log(err)
+      const errorMsg = err.data?.zodError?.fieldErrors.content
+
       if (errorMsg && errorMsg[0]) {
         toast.error(errorMsg[0])
       } else {
@@ -223,6 +246,33 @@ const Home = () => {
       setCreateValue('')
     }
   }
+
+  const removeNote = () => {
+    if(clickedId) {
+      const notes: Notes[] = getNotesLocal()
+
+      const updatedNotes = notes.filter(n => n.id !== clickedId)
+      setEditCard(false)
+
+      if(user) {
+        deleteNote({
+          noteId: clickedId
+        })
+      }
+
+      saveNotesLocal(updatedNotes)
+      setLocalNotes(updatedNotes)
+
+      toast.success('Note have been deleted')
+
+      setClickedId('')
+      
+    } else {
+      setEditCard(false)
+      toast.success('Note have been deleted')
+    }
+  }
+
   type RemoteNotes = UseTRPCQueryResult<Notes[], unknown>;
 
   let remoteNotes: RemoteNotes
@@ -263,13 +313,17 @@ const Home = () => {
     const existingNotes = new Map(localNotes.map((note: Notes) => [note.id, note]))
     let mergedNotes: Notes[]
 
-    if (remoteNotes.data) {
-      remoteNotes.data?.forEach((remoteNote: Notes) => {
-        const existingNote = existingNotes.get(remoteNote.id)
-        if (!existingNote || (remoteNote.updatedAt ?? remoteNote.createdAt) > (existingNote.updatedAt ?? existingNote.createdAt)) {
-          existingNotes.set(remoteNote.id, remoteNote)
-        }
-      })
+    if(user || !getLocalInitialized()) {
+      if (remoteNotes.data) {
+        remoteNotes.data?.forEach((remoteNote: Notes) => {
+          const existingNote = existingNotes.get(remoteNote.id)
+          if (!existingNote || (remoteNote.updatedAt ?? remoteNote.createdAt) > (existingNote.updatedAt ?? existingNote.createdAt)) {
+            existingNotes.set(remoteNote.id, remoteNote)
+          }
+        })
+      }
+
+      if(!user) setLocalInitialized(true)
     }
 
     localNotes.forEach((localNote: Notes) => {
@@ -372,7 +426,7 @@ const Home = () => {
               <Card.Divider />
               <Card.Body css={{ py: "$6", height: '100%' }}>
                 <Row>
-                  <NavButton className='mr-2 bg-red-300'>Remove</NavButton>
+                  <NavButton onClick={removeNote} className='mr-2 bg-red-300'>Remove</NavButton>
                   <NavButton className='flex justify-center items-center mr-2'>P</NavButton>
                   <div className='inline-block relative px-[9px] py-[5px] border border-[#0006] rounded-md'>
                     <label>

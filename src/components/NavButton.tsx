@@ -3,7 +3,7 @@ import styles from '../styles/NavButton.module.css'
 
 interface Props {
   href?: string;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLElement>) => void;
   style?: React.CSSProperties;
   className?: string;
   children: React.ReactNode;

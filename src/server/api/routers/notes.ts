@@ -78,5 +78,21 @@ export const notesRouter = createTRPCRouter({
         }
       })
       return note
-    })
+    }),
+    deleteNote: privateProcedure
+      .input(z.object({ noteId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const { success } = await ratelimit.limit(ctx.userId)
+
+        if(!success) {
+          throw new TRPCError({ code: 'TOO_MANY_REQUESTS' })
+        }
+        const deletion = await ctx.prisma.notes.delete({
+          where: {
+            id: input.noteId
+          }
+        })
+
+        return deletion
+      })
 });
